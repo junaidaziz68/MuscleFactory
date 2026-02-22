@@ -10,7 +10,7 @@
           <div class="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <Activity class="w-6 h-6 text-zinc-950" />
           </div>
-          <h1 class="text-xl font-bold tracking-tight">FitnessPro</h1>
+          <h1 class="text-xl font-bold tracking-tight">MuscleFactory</h1>
         </div>
 
         <nav class="flex-1 px-4 space-y-1">
@@ -75,6 +75,7 @@ const isSidebarOpen = ref(false)
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Calorie Calculator', path: '/calculator', icon: Calculator },
+  { name: 'Workout Plan', path: '/workout-plan', icon: Dumbbell },
 ]
 </script>
 

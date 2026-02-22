@@ -103,10 +103,11 @@
     GlassWater,
     Activity
   } from 'lucide-vue-next'
-  import { FoodAPI } from '../api'
+  import { FoodAPI, WorkoutAPI } from '../api' // Imports updated
   
   const todayDate = new Date().toISOString().split('T')[0]
   const foodLogs = ref([])
+  const backendWorkouts = ref([]) // State for workouts
   
   onMounted(async () => {
     try {
@@ -114,6 +115,14 @@
       foodLogs.value = res.data
     } catch (err) {
       console.warn('Backend not reachable, using mockup data.')
+    }
+    
+    // Fetch actual data from Koa backend via Vite proxy
+    try {
+        const workouts = await WorkoutAPI.getWorkouts()
+        backendWorkouts.value = workouts
+    } catch (err) {
+        console.error('Failed to fetch workouts from backend:', err)
     }
   })
   
@@ -142,10 +151,23 @@
     ]
   })
   
-  const schedule = [
-      { id: 1, title: 'Upper Body Workout', time: '08:00 AM', description: 'Strength Training', icon: Dumbbell, color: 'text-emerald-400', bgColor: 'bg-emerald-400/10' },
-      { id: 2, title: 'High Protein Lunch', time: '01:00 PM', description: 'Chicken & Quinoa', icon: Utensils, color: 'text-indigo-400', bgColor: 'bg-indigo-400/10' },
-      { id: 3, title: 'Hydration Goal', time: 'All Day', description: '3.5L / 4L', icon: GlassWater, color: 'text-cyan-400', bgColor: 'bg-cyan-400/10' },
-  ]
+  const schedule = computed(() => {
+    if (backendWorkouts.value.length > 0) {
+        return backendWorkouts.value.map((wk, index) => ({
+            id: wk.id || index,
+            title: wk.name,
+            time: new Date(wk.date).toLocaleDateString(),
+            description: 'Workout from Backend',
+            icon: Dumbbell,
+            color: 'text-emerald-400',
+            bgColor: 'bg-emerald-400/10'
+        }))
+    }
+    return [
+        { id: 1, title: 'Upper Body Workout', time: '08:00 AM', description: 'Strength Training', icon: Dumbbell, color: 'text-emerald-400', bgColor: 'bg-emerald-400/10' },
+        { id: 2, title: 'High Protein Lunch', time: '01:00 PM', description: 'Chicken & Quinoa', icon: Utensils, color: 'text-indigo-400', bgColor: 'bg-indigo-400/10' },
+        { id: 3, title: 'Hydration Goal', time: 'All Day', description: '3.5L / 4L', icon: GlassWater, color: 'text-cyan-400', bgColor: 'bg-cyan-400/10' },
+    ]
+  })
   </script>
   
