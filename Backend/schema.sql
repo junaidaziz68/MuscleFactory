@@ -15,7 +15,7 @@ CREATE TABLE workout_exercises (
     reps INT NOT NULL,
     weight FLOAT NOT NULL,
     FOREIGN KEY (workout_id) REFERENCES workouts(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 INSERT INTO workouts (name, date) VALUES 
 ('Morning Routine', '2023-11-01'),
@@ -26,3 +26,11 @@ INSERT INTO workout_exercises (workout_id, name, `sets`, reps, weight) VALUES
 (1, 'Pull Ups', 3, 8, 0),
 (2, 'Bench Press', 4, 8, 135),
 (2, 'Squats', 4, 10, 185);
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;

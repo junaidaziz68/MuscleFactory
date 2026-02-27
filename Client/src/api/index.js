@@ -1,3 +1,45 @@
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+};
+
+export const AuthAPI = {
+    login: async (email, password) => {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Login failed');
+        }
+        return response.json();
+    },
+    register: async (username, email, password) => {
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email, password })
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Registration failed');
+        }
+        return response.json();
+    },
+    getProfile: async () => {
+        const response = await fetch('/api/profile', {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch profile');
+        return response.json();
+    }
+};
+
 export const FoodAPI = {
     getLogs: async (date) => {
         return {
@@ -18,7 +60,7 @@ export const WorkoutAPI = {
     createWorkout: async (workout) => {
         const response = await fetch('/api/workouts', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify(workout)
         });
         if (!response.ok) throw new Error(`Error creating workout`);
@@ -32,7 +74,7 @@ export const WorkoutAPI = {
     createExercise: async (exercise) => {
         const response = await fetch('/api/exercises', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify(exercise)
         });
         if (!response.ok) throw new Error(`Error creating exercise`);
@@ -41,28 +83,34 @@ export const WorkoutAPI = {
     updateWorkout: async (id, workout) => {
         const response = await fetch(`/api/workouts/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify(workout)
         });
         if (!response.ok) throw new Error(`Error updating workout`);
         return response.json();
     },
     deleteWorkout: async (id) => {
-        const response = await fetch(`/api/workouts/${id}`, { method: 'DELETE' });
+        const response = await fetch(`/api/workouts/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
         if (!response.ok) throw new Error(`Error deleting workout`);
         return response.json();
     },
     updateExercise: async (id, exercise) => {
         const response = await fetch(`/api/exercises/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify(exercise)
         });
         if (!response.ok) throw new Error(`Error updating exercise`);
         return response.json();
     },
     deleteExercise: async (id) => {
-        const response = await fetch(`/api/exercises/${id}`, { method: 'DELETE' });
+        const response = await fetch(`/api/exercises/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
         if (!response.ok) throw new Error(`Error deleting exercise`);
         return response.json();
     }

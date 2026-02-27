@@ -4,6 +4,8 @@ const Router = require('@koa/router');
 const bodyParser = require('koa-bodyparser');
 const cors = require('@koa/cors');
 const fetch = require('node-fetch');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 const db = require('./db');
 
@@ -62,41 +64,75 @@ router.get('/api/exercises', async ctx => {
 router.post('/api/exercises', async ctx => {
     const { workout_id, name, sets, reps, weight } = ctx.request.body;
 
-    if (!workout_id || !name || !sets || !reps) {
+    if (!workout_id || !name) {
         ctx.status = 400;
         ctx.body = { error: 'Missing required fields' };
         return;
     }
 
-    const [result] = await db.execute(
-        'INSERT INTO workout_exercises (workout_id, name, `sets`, reps, weight) VALUES (?, ?, ?, ?, ?)',
-        [workout_id, name, sets, reps, weight]
-    );
+    const safeSets = Number(sets) || 1;
+    const safeReps = Number(reps) || 1;
+    const safeWeight = Number(weight) || 0;
 
-    ctx.body = { id: result.insertId };
+    try {
+        const [result] = await db.execute(
+            'INSERT INTO workout_exercises (workout_id, name, `sets`, reps, weight) VALUES (?, ?, ?, ?, ?)',
+            [workout_id, name, safeSets, safeReps, safeWeight]
+        );
+        ctx.body = { id: result.insertId };
+    } catch (err) {
+        ctx.status = 500;
+        ctx.body = { error: err.message };
+    }
 });
 
 router.put('/api/workouts/:id', async ctx => {
     const { name } = ctx.request.body;
     const { id } = ctx.params;
-    await db.execute('UPDATE workouts SET name = ? WHERE id = ?', [name, id]);
-    ctx.body = { success: true };
+    try {
+        await db.execute('UPDATE workouts SET name = ? WHERE id = ?', [name, id]);
+        ctx.body = { success: true };
+    } catch (err) {
+        ctx.status = 500;
+        ctx.body = { error: err.message };
+    }
 });
 
 router.delete('/api/workouts/:id', async ctx => {
     const { id } = ctx.params;
-    await db.execute('DELETE FROM workouts WHERE id = ?', [id]);
-    ctx.body = { success: true };
+    try {
+        await db.execute('DELETE FROM workouts WHERE id = ?', [id]);
+        ctx.body = { success: true };
+    } catch (err) {
+        ctx.status = 500;
+        ctx.body = { error: err.message };
+    }
 });
 
 router.put('/api/exercises/:id', async ctx => {
     const { name, sets, reps, weight } = ctx.request.body;
     const { id } = ctx.params;
-    await db.execute(
-        'UPDATE workout_exercises SET name = ?, `sets` = ?, reps = ?, weight = ? WHERE id = ?',
-        [name, sets, reps, weight, id]
-    );
-    ctx.body = { success: true };
+
+    if (!name) {
+        ctx.status = 400;
+        ctx.body = { error: 'Missing required field: name' };
+        return;
+    }
+
+    const safeSets = Number(sets) || 1;
+    const safeReps = Number(reps) || 1;
+    const safeWeight = Number(weight) || 0;
+
+    try {
+        await db.execute(
+            'UPDATE workout_exercises SET name = ?, `sets` = ?, reps = ?, weight = ? WHERE id = ?',
+            [name, safeSets, safeReps, safeWeight, id]
+        );
+        ctx.body = { success: true };
+    } catch (err) {
+        ctx.status = 500;
+        ctx.body = { error: err.message };
+    }
 });
 
 router.delete('/api/exercises/:id', async ctx => {
@@ -104,6 +140,98 @@ router.delete('/api/exercises/:id', async ctx => {
     await db.execute('DELETE FROM workout_exercises WHERE id = ?', [id]);
     ctx.body = { success: true };
 });
+
+
+// User registration
+router.post('/api/register', async ctx => {
+    const { username, email, password } = ctx.request.body;
+    if (!username || !email || !password) {
+        ctx.status = 400;
+        ctx.body = { error: 'Username, email and password are required' };
+        return;
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    try {
+        await db.execute('INSERT INTO users (username, email, password) VALUES (?, ?, ?)', [username, email, hashedPassword]);
+        ctx.body = { success: true };
+    } catch (err) {
+        console.error('Registration error:', err);
+        ctx.status = 500;
+        ctx.body = { error: err.message || 'Failed to register user' };
+    }
+});
+
+
+// User login
+
+router.post('/api/login', async (ctx) => {
+    const { email, password } = ctx.request.body;
+
+    if (!email || !password) {
+        ctx.status = 400;
+        ctx.body = { error: 'Email and password required' };
+        return;
+    }
+
+    const [rows] = await db.execute(
+        'SELECT * FROM users WHERE email = ?',
+        [email]
+    );
+
+    if (rows.length === 0) {
+        ctx.status = 400;
+        ctx.body = { error: 'Invalid credentials' };
+        return;
+    }
+
+    const user = rows[0];
+
+    const validPassword = await bcrypt.compare(password, user.password);
+
+    if (!validPassword) {
+        ctx.status = 400;
+        ctx.body = { error: 'Invalid credentials' };
+        return;
+    }
+
+    const token = jwt.sign(
+        { id: user.id, email: user.email, username: user.username },
+        process.env.JWT_SECRET,
+        { expiresIn: '1d' }
+    );
+
+    ctx.body = { token, user: { id: user.id, email: user.email, username: user.username } };
+});
+// MIDDLEWARE FOR PROTECTED ROUTES
+const authMiddleware = async (ctx, next) => {
+    const authHeader = ctx.headers.authorization;
+
+    if (!authHeader) {
+        ctx.status = 401;
+        ctx.body = { error: 'No token provided' };
+        return;
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        ctx.state.user = decoded;
+        await next();
+    } catch (err) {
+        ctx.status = 401;
+        ctx.body = { error: 'Invalid token' };
+    }
+};
+
+
+
+router.get('/api/profile', authMiddleware, async (ctx) => {
+    ctx.body = { message: 'Protected route', user: ctx.state.user };
+});
+
+
+
 
 
 app.use(router.routes()).use(router.allowedMethods());
