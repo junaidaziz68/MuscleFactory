@@ -34,3 +34,23 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
+
+CREATE TABLE diet_plans (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    diet_style VARCHAR(50) NOT NULL,
+    meals_count INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE diet_plan_meals (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    diet_plan_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    ingredients TEXT NOT NULL, -- Stored as JSON string
+    calories INT NOT NULL,
+    macros TEXT NOT NULL, -- Stored as JSON string
+    FOREIGN KEY (diet_plan_id) REFERENCES diet_plans(id) ON DELETE CASCADE
+) ENGINE=InnoDB;

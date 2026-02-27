@@ -230,6 +230,80 @@ router.get('/api/profile', authMiddleware, async (ctx) => {
     ctx.body = { message: 'Protected route', user: ctx.state.user };
 });
 
+// --- DIET PLAN ROUTES ---
+
+// Get all diet plans for the authenticated user
+router.get('/api/diet-plans', authMiddleware, async (ctx) => {
+    const userId = ctx.state.user.id;
+    try {
+        const [plans] = await db.execute('SELECT * FROM diet_plans WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+
+        // Enhance plans with their meals
+        for (let plan of plans) {
+            const [meals] = await db.execute('SELECT * FROM diet_plan_meals WHERE diet_plan_id = ?', [plan.id]);
+            plan.meals = meals.map(meal => ({
+                ...meal,
+                ingredients: JSON.parse(meal.ingredients),
+                macros: JSON.parse(meal.macros)
+            }));
+        }
+
+        ctx.body = plans;
+    } catch (err) {
+        console.error('Error fetching diet plans:', err);
+        ctx.status = 500;
+        ctx.body = { error: 'Failed to fetch diet plans' };
+    }
+});
+
+// Save a new diet plan
+router.post('/api/diet-plans', authMiddleware, async (ctx) => {
+    const userId = ctx.state.user.id;
+    const { name, diet_style, meals_count, meals } = ctx.request.body;
+
+    if (!name || !diet_style || !meals_count || !meals || !Array.isArray(meals)) {
+        ctx.status = 400;
+        ctx.body = { error: 'Missing required diet plan data' };
+        return;
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // 1. Insert the Diet Plan
+        const [planResult] = await connection.execute(
+            'INSERT INTO diet_plans (user_id, name, diet_style, meals_count) VALUES (?, ?, ?, ?)',
+            [userId, name, diet_style, meals_count]
+        );
+        const planId = planResult.insertId;
+
+        // 2. Insert the Meals
+        for (const meal of meals) {
+            await connection.execute(
+                'INSERT INTO diet_plan_meals (diet_plan_id, name, ingredients, calories, macros) VALUES (?, ?, ?, ?, ?)',
+                [
+                    planId,
+                    meal.name,
+                    JSON.stringify(meal.ingredients),
+                    meal.calories,
+                    JSON.stringify(meal.macros)
+                ]
+            );
+        }
+
+        await connection.commit();
+        ctx.body = { success: true, id: planId };
+    } catch (err) {
+        await connection.rollback();
+        console.error('Error saving diet plan:', err);
+        ctx.status = 500;
+        ctx.body = { error: 'Failed to save diet plan' };
+    } finally {
+        connection.release();
+    }
+});
+
 
 
 

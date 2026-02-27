@@ -115,3 +115,22 @@ export const WorkoutAPI = {
         return response.json();
     }
 }
+
+export const DietAPI = {
+    getPlans: async () => {
+        const response = await fetch('/api/diet-plans', {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Error fetching diet plans');
+        return response.json();
+    },
+    savePlan: async (planData) => {
+        const response = await fetch('/api/diet-plans', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(planData)
+        });
+        if (!response.ok) throw new Error('Error saving diet plan');
+        return response.json();
+    }
+}

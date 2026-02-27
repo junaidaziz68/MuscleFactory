@@ -188,6 +188,15 @@
       tdee,
       offset
     }
+
+    // Save to localStorage for the Diet Plan to access
+    const saveTargets = {
+      tdee: Math.round(tdee),
+      protein: Math.round(tdee * 0.3 / 4),
+      carbs: Math.round(tdee * 0.45 / 4),
+      fats: Math.round(tdee * 0.25 / 9)
+    }
+    localStorage.setItem('userMacroTargets', JSON.stringify(saveTargets))
   }
   </script>
   
