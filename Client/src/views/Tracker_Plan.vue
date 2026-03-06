@@ -9,7 +9,7 @@
       
       <!-- Custom Toggle -->
       <div class="inline-flex bg-zinc-900/80 backdrop-blur-md p-1.5 rounded-2xl border border-zinc-800 shadow-xl">
-        <button v-for="tab in ['Food', 'Workout']" :key="tab"
+        <button v-for="tab in ['Check-In', 'Workout']" :key="tab"
           @click="activeTab = tab"
           :class="['relative px-8 py-3 text-sm font-bold rounded-xl transition-all duration-300', 
             activeTab === tab 
@@ -22,104 +22,84 @@
       </div>
     </header>
 
-    <!-- FOOD VIEW -->
-    <main v-if="activeTab === 'Food'" class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <!-- CHECK-IN VIEW -->
+    <main v-if="activeTab === 'Check-In'" class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      <!-- Premium Hero Stats Panel -->
-      <section class="bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-800 rounded-3xl p-8 relative overflow-hidden shadow-2xl">
-        <div class="absolute top-0 right-0 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+      <!-- Hydration Tracker Panel -->
+      <section class="bg-gradient-to-r from-sky-900 to-blue-900 border border-sky-700/50 rounded-3xl p-6 lg:p-8 flex flex-col md:flex-row items-center gap-8 shadow-2xl relative overflow-hidden group">
+        <div class="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.05)_50%,transparent_75%)] bg-[length:250%_250%] opacity-0 group-hover:opacity-100 group-hover:animate-shimmer transition-opacity"></div>
+        <div class="absolute -right-20 -top-20 w-64 h-64 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
         
-        <div class="relative z-10 flex flex-col lg:flex-row items-center gap-12">
-          <!-- Calorie Ring / Main Stat -->
-          <div class="flex-shrink-0 flex flex-col items-center justify-center p-6 bg-zinc-950/50 rounded-full ring-4 ring-zinc-800/50 relative w-48 h-48 shadow-inner">
-             <div class="absolute inset-2 rounded-full border-[12px] border-zinc-900"></div>
-             <!-- Fake SVG ring for visual pop -->
-             <svg class="absolute inset-0 w-full h-full -rotate-90 drop-shadow-lg" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" fill="none" class="stroke-zinc-800" stroke-width="8"></circle>
-                <circle cx="50" cy="50" r="40" fill="none" class="stroke-violet-500 transition-all duration-1000" stroke-width="8" stroke-linecap="round" 
-                        :stroke-dasharray="`${Math.min((dailySummary.kcal / 2400) * 251, 251)} 251`"></circle>
-             </svg>
-             <span class="text-4xl font-black text-white relative flex items-baseline gap-1">
-               {{ Math.round(dailySummary.kcal) }}
-             </span>
-             <span class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest relative mt-1 block w-24 text-center leading-tight">/ 2400 kcal</span>
+        <div class="flex items-center gap-6 relative z-10 w-full md:w-1/3">
+          <div class="w-16 h-16 rounded-2xl bg-sky-500/20 border border-sky-400/50 flex items-center justify-center text-sky-400 flex-shrink-0 shadow-inner">
+            <Droplets class="w-8 h-8" />
           </div>
-
-          <!-- Macros Row -->
-          <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-            <div class="bg-zinc-900/80 backdrop-blur-sm border border-zinc-700/50 p-6 rounded-2xl flex flex-col justify-center relative overflow-hidden group hover:border-blue-500/30 transition-colors">
-              <div class="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-              <p class="text-xs text-zinc-500 font-bold uppercase tracking-widest mb-2">Protein</p>
-              <div class="flex items-end gap-2">
-                <span class="text-3xl font-black text-zinc-100">{{ Math.round(dailySummary.p) }}</span>
-                <span class="text-sm font-bold text-zinc-600 mb-1">/ 180g</span>
-              </div>
-            </div>
-            
-            <div class="bg-zinc-900/80 backdrop-blur-sm border border-zinc-700/50 p-6 rounded-2xl flex flex-col justify-center relative overflow-hidden group hover:border-amber-500/30 transition-colors">
-              <div class="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-orange-500 to-amber-400 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-              <p class="text-xs text-zinc-500 font-bold uppercase tracking-widest mb-2">Carbs</p>
-              <div class="flex items-end gap-2">
-                <span class="text-3xl font-black text-zinc-100">{{ Math.round(dailySummary.c) }}</span>
-                <span class="text-sm font-bold text-zinc-600 mb-1">/ 250g</span>
-              </div>
-            </div>
-
-            <div class="bg-zinc-900/80 backdrop-blur-sm border border-zinc-700/50 p-6 rounded-2xl flex flex-col justify-center relative overflow-hidden group hover:border-pink-500/30 transition-colors">
-              <div class="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-rose-500 to-pink-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-              <p class="text-xs text-zinc-500 font-bold uppercase tracking-widest mb-2">Fats</p>
-              <div class="flex items-end gap-2">
-                <span class="text-3xl font-black text-zinc-100">{{ Math.round(dailySummary.f) }}</span>
-                <span class="text-sm font-bold text-zinc-600 mb-1">/ 70g</span>
-              </div>
-            </div>
+          <div>
+            <h3 class="text-2xl font-black text-white leading-tight">Hydration</h3>
+            <p class="text-sm font-bold text-sky-300 uppercase tracking-widest mt-0.5">Daily Goal: 3L</p>
           </div>
+        </div>
+
+        <div class="flex-1 w-full relative z-10 space-y-4">
+          <div class="flex items-end justify-between font-bold">
+            <span class="text-3xl text-white">{{ totalWater }} <span class="text-sm text-sky-300">ml</span></span>
+            <span class="text-sm text-sky-400">{{ Math.round((totalWater / 3000) * 100) }}%</span>
+          </div>
+          <div class="h-3 w-full bg-sky-950 rounded-full overflow-hidden shadow-inner isolate relative">
+            <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(6,182,212,0.5)]" 
+                 :style="{ width: `${Math.min((totalWater / 3000) * 100, 100)}%` }"></div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 relative z-10 w-full md:w-auto">
+          <button @click="addWater(250)" class="flex-1 md:flex-none px-6 py-3 bg-sky-500 hover:bg-sky-400 text-sky-950 font-black rounded-xl transition-all shadow-[0_0_20px_rgba(14,165,233,0.3)] hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+            +250ml
+          </button>
+          <button @click="addWater(500)" class="flex-1 md:flex-none px-6 py-3 bg-sky-950 border border-sky-500/50 hover:bg-sky-800 text-sky-300 hover:text-white font-black rounded-xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+            +500ml
+          </button>
         </div>
       </section>
 
-      <!-- Horizontal Meal Blocks (2x2 Grid) -->
-      <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div v-for="meal in groupedMeals" :key="meal.name" class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex flex-col transition-all hover:border-violet-500/30 shadow-lg relative overflow-hidden">
-          <div class="absolute inset-0 bg-gradient-to-b from-violet-500/5 to-transparent pointer-events-none opacity-0 hover:opacity-100 transition-opacity"></div>
-          
-          <div class="flex justify-between items-start mb-6 relative z-10">
-            <div>
-              <h3 class="text-2xl font-bold text-white mb-1">{{ meal.name }}</h3>
-              <p class="text-xs font-bold text-zinc-500 uppercase tracking-widest">{{ meal.time }}</p>
-            </div>
-            <div class="bg-zinc-950 border border-zinc-800 px-3 py-1.5 rounded-xl shadow-inner">
-               <span class="text-sm font-bold text-violet-400">{{ meal.items.reduce((sum, item) => sum + item.calories, 0) }}</span>
-               <span class="text-[10px] text-zinc-500 ml-1 uppercase font-bold">Kcal</span>
-            </div>
-          </div>
+      <!-- Weight & Photos Grid -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Weight Card -->
+        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 relative overflow-hidden shadow-xl flex flex-col hover:border-violet-500/30 transition-colors">
+           <h3 class="text-2xl font-bold text-white mb-6">Today's Weight</h3>
+           <div class="flex items-center gap-4 mb-8">
+             <input type="number" step="0.1" v-model="weightInput" class="w-full bg-zinc-950 border border-zinc-800 focus:border-violet-500 rounded-2xl px-6 py-6 text-5xl font-black text-white outline-none transition-colors text-center" placeholder="0.0">
+             <span class="text-2xl font-bold text-zinc-500">kg</span>
+           </div>
+           
+           <div class="mt-auto">
+             <button @click="saveWeight" :disabled="isSavingWeight" class="w-full py-4 bg-violet-600 hover:bg-violet-500 text-white font-black rounded-2xl transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)] disabled:opacity-50">
+               {{ isSavingWeight ? 'Saving...' : 'Log Weight' }}
+             </button>
+             <p v-if="todayWeight" class="mt-4 text-center text-sm font-bold text-emerald-400 bg-emerald-500/10 py-2 rounded-lg border border-emerald-500/20">Logged: {{ todayWeight }} kg</p>
+           </div>
+        </div>
 
-          <div class="flex-1 space-y-3 relative z-10">
-            <div v-for="item in meal.items" :key="item.id" class="flex items-center justify-between p-4 rounded-2xl bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800/50 hover:border-zinc-700 transition-colors group">
-               <div class="flex items-center gap-4">
-                 <div class="w-1.5 h-8 bg-violet-500/30 group-hover:bg-violet-500 rounded-full transition-colors"></div>
-                 <div>
-                   <p class="font-bold text-zinc-200">{{ item.name }}</p>
-                   <p class="text-[10px] text-zinc-500 uppercase mt-0.5 tracking-wider font-bold">{{ item.amount }} {{ item.unit }}</p>
-                 </div>
-               </div>
-               <div class="text-right">
-                 <p class="text-sm font-bold text-white mb-0.5">{{ item.calories }} <span class="text-[10px] text-zinc-500 font-normal">kcal</span></p>
-                 <div class="flex gap-2 text-[10px] font-bold text-zinc-600 justify-end">
-                   <span><span class="text-zinc-400">P</span>{{item.protein}}</span>
-                   <span><span class="text-zinc-400">C</span>{{item.carbs}}</span>
-                   <span><span class="text-zinc-400">F</span>{{item.fats}}</span>
-                 </div>
-               </div>
-            </div>
-            
-            <div v-if="meal.items.length === 0" class="h-28 flex items-center justify-center border-2 border-dashed border-zinc-800/80 rounded-2xl bg-zinc-950/30">
-               <span class="text-zinc-600 text-sm font-medium">No items logged</span>
-            </div>
-          </div>
+        <!-- Photos Card -->
+        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 relative overflow-hidden shadow-xl flex flex-col hover:border-violet-500/30 transition-colors">
+           <h3 class="text-2xl font-bold text-white mb-6">Progress Photo</h3>
+           
+           <div v-if="todayPhotos && todayPhotos.length > 0" class="mb-6 grid grid-cols-2 gap-4">
+              <img v-for="photo in todayPhotos" :key="photo" :src="`http://localhost:3000${photo}`" class="rounded-2xl border-2 border-zinc-800 aspect-square object-cover w-full opacity-90 hover:opacity-100 transition-opacity" />
+           </div>
 
-          <button class="mt-5 w-full py-3.5 bg-zinc-800 hover:bg-violet-600 hover:shadow-lg hover:shadow-violet-500/20 text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 relative z-10">
-            <Plus class="w-4 h-4" /> Add Food
-          </button>
+           <div v-else class="mb-6 h-48 border-2 border-dashed border-zinc-700 rounded-2xl flex flex-col items-center justify-center text-zinc-500 bg-zinc-950/50">
+             <Camera class="w-8 h-8 mb-2 opacity-50" />
+             <p class="text-sm font-medium">No photo uploaded today</p>
+           </div>
+           
+           <input type="file" ref="fileInput" @change="handleFileUpload" accept="image/*" class="hidden" />
+           
+           <div class="mt-auto">
+             <button @click="$refs.fileInput.click()" :disabled="isUploadingPhoto" class="w-full py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-black rounded-2xl transition-all border border-zinc-700 disabled:opacity-50 flex items-center justify-center gap-2">
+               <Upload class="w-5 h-5" />
+               {{ isUploadingPhoto ? 'Uploading...' : 'Upload New Photo' }}
+             </button>
+           </div>
         </div>
       </section>
     </main>
@@ -212,27 +192,103 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { Check, History, Plus, Dumbbell } from 'lucide-vue-next'
-import { FoodAPI, WorkoutAPI } from '../api'
+import { Check, History, Plus, Dumbbell, Droplets, Camera, Upload } from 'lucide-vue-next'
+import { WorkoutAPI, WaterAPI, CheckInAPI } from '../api'
 
-const activeTab = ref('Food')
+const activeTab = ref('Check-In')
 const todayDate = new Date().toISOString().split('T')[0]
 const todayDisp = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short' })
 
-const foodLogs = ref([])
+// Data
 const activeWorkout = ref([])
+const waterLogs = ref([])
+
+const weightInput = ref('')
+const todayWeight = ref(null)
+const todayPhotos = ref([])
+
+// State flags
+const isAddingWater = ref(false)
+const isSavingWeight = ref(false)
+const isUploadingPhoto = ref(false)
+
+const fileInput = ref(null)
 
 onMounted(async () => {
-  await fetchFoodLogs()
+  await fetchCheckIns()
+  await fetchWaterLogs()
   await fetchWorkouts()
 })
 
-const fetchFoodLogs = async () => {
+const fetchCheckIns = async () => {
   try {
-    const res = await FoodAPI.getLogs(todayDate)
-    foodLogs.value = res
+    const res = await CheckInAPI.getLogs(todayDate)
+    if (res.weight) {
+      todayWeight.value = res.weight
+      weightInput.value = res.weight
+    }
+    if (res.photos) {
+      todayPhotos.value = res.photos
+    }
   } catch (err) {
-    console.error('Failed to fetch food logs:', err)
+    console.error('Failed to fetch checkins:', err)
+  }
+}
+
+const saveWeight = async () => {
+  if (!weightInput.value || isSavingWeight.value) return;
+  isSavingWeight.value = true;
+  try {
+    const res = await CheckInAPI.saveWeight({ date: todayDate, weight: Number(weightInput.value) })
+    todayWeight.value = res.weight
+  } catch (err) {
+    console.error('Failed to save weight:', err)
+  } finally {
+    isSavingWeight.value = false;
+  }
+}
+
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0];
+  if (!file || isUploadingPhoto.value) return;
+
+  isUploadingPhoto.value = true;
+  try {
+    const formData = new FormData();
+    formData.append('photo', file);
+    formData.append('date', todayDate);
+
+    const res = await CheckInAPI.uploadPhoto(formData);
+    if (res.photo_url) {
+      todayPhotos.value.push(res.photo_url);
+    }
+  } catch (err) {
+    console.error('Failed to upload photo:', err)
+  } finally {
+    isUploadingPhoto.value = false;
+    event.target.value = ''; // Reset input
+  }
+}
+
+const fetchWaterLogs = async () => {
+  try {
+    const res = await WaterAPI.getLogs(todayDate)
+    waterLogs.value = res
+  } catch (err) {
+    console.error('Failed to fetch water logs:', err)
+  }
+}
+
+const addWater = async (amount) => {
+  if (isAddingWater.value) return;
+  isAddingWater.value = true;
+  try {
+    await WaterAPI.addLog({ date: todayDate, amount })
+    await fetchWaterLogs()
+  } catch (err) {
+    console.error('Failed to add water log:', err)
+  } finally {
+    isAddingWater.value = false;
   }
 }
 
@@ -259,22 +315,7 @@ const fetchWorkouts = async () => {
   }
 }
 
-const dailySummary = computed(() => {
-  return foodLogs.value.reduce((acc, log) => ({
-    kcal: acc.kcal + log.calories,
-    p: acc.p + log.protein,
-    c: acc.c + log.carbs,
-    f: acc.f + log.fats
-  }), { kcal: 0, p: 0, c: 0, f: 0 })
-})
-
-// Group logs by meal type for display
-const groupedMeals = computed(() => {
-  const types = ['Breakfast', 'Lunch', 'Dinner', 'Snack']
-  return types.map(type => ({
-    name: type,
-    time: type === 'Breakfast' ? '08:30 AM' : (type === 'Lunch' ? '01:15 PM' : (type === 'Dinner' ? '07:30 PM' : 'Anytime')),
-    items: foodLogs.value.filter(log => log.meal_type === type.toLowerCase())
-  }))
+const totalWater = computed(() => {
+  return waterLogs.value.reduce((sum, log) => sum + log.amount, 0)
 })
 </script>

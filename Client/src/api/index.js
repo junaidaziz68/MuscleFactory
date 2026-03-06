@@ -51,13 +51,69 @@ export const FoodAPI = {
     saveLog: async (logData) => {
         const response = await fetch('/api/food-logs', {
             method: 'POST',
-            headers: getAuthHeaders(),
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(logData)
         });
         if (!response.ok) throw new Error('Error saving food log');
         return response.json();
     }
-}
+};
+
+export const CheckInAPI = {
+    getLogs: async (date) => {
+        const response = await fetch(`/api/checkins?date=${date}`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Error fetching checkin logs');
+        return response.json();
+    },
+    saveWeight: async (weightData) => {
+        const response = await fetch('/api/checkins/weight', {
+            method: 'POST',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(weightData)
+        });
+        if (!response.ok) throw new Error('Error saving weight');
+        return response.json();
+    },
+    uploadPhoto: async (formData) => {
+        const response = await fetch('/api/checkins/photo', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: formData
+        });
+        if (!response.ok) throw new Error('Error uploading photo');
+        return response.json();
+    }
+};
+
+export const WaterAPI = {
+    getLogs: async (date) => {
+        const response = await fetch(`/api/water-logs?date=${date}`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Error fetching water logs');
+        return response.json();
+    },
+    addLog: async (logData) => {
+        const response = await fetch('/api/water-logs', {
+            method: 'POST',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(logData)
+        });
+        if (!response.ok) throw new Error('Error adding water log');
+        return response.json();
+    }
+};
 
 export const WorkoutAPI = {
     getWorkouts: async (date) => {
@@ -140,7 +196,7 @@ export const WorkoutAPI = {
         if (!response.ok) throw new Error(`Error deleting exercise`);
         return response.json();
     }
-}
+};
 
 export const DietAPI = {
     getPlans: async () => {
@@ -159,4 +215,4 @@ export const DietAPI = {
         if (!response.ok) throw new Error('Error saving diet plan');
         return response.json();
     }
-}
+};
