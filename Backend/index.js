@@ -32,9 +32,39 @@ router.get('/', ctx => {
 });
 
 
-router.get('/api/workouts', async ctx => {
+// MIDDLEWARE FOR PROTECTED ROUTES
+const authMiddleware = async (ctx, next) => {
+    const authHeader = ctx.headers.authorization;
+
+    if (!authHeader) {
+        ctx.status = 401;
+        ctx.body = { error: 'No token provided' };
+        return;
+    }
+
+    const token = authHeader.split(' ')[1];
+
     try {
-        const [rows] = await db.execute('SELECT * FROM workouts');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        ctx.state.user = decoded;
+        await next();
+    } catch (err) {
+        ctx.status = 401;
+        ctx.body = { error: 'Invalid token' };
+    }
+};
+
+router.get('/api/workouts', authMiddleware, async ctx => {
+    try {
+        const userId = ctx.state.user.id;
+        const { date } = ctx.query;
+        let query = 'SELECT * FROM workouts WHERE user_id = ?';
+        const params = [userId];
+        if (date) {
+            query += ' AND date = ?';
+            params.push(date);
+        }
+        const [rows] = await db.execute(query, params);
         ctx.body = rows.length ? rows : []; // Return an empty array if no workouts found
     } catch (err) {
         ctx.status = 500;
@@ -42,26 +72,36 @@ router.get('/api/workouts', async ctx => {
     }
 });
 
-router.post('/api/workouts', async ctx => {
+router.post('/api/workouts', authMiddleware, async ctx => {
+    const userId = ctx.state.user.id;
     const { name, date } = ctx.request.body;
     const [result] = await db.execute(
-        'INSERT INTO workouts (name, date) VALUES (?, ?)',
-        [name, date]
+        'INSERT INTO workouts (user_id, name, date) VALUES (?, ?, ?)',
+        [userId, name, date]
     );
     ctx.body = { id: result.insertId, name, date };
 });
 
 
-router.get('/api/exercises', async ctx => {
+router.get('/api/exercises', authMiddleware, async ctx => {
     try {
-        const [rows] = await db.execute('SELECT * FROM workout_exercises');
+        const { workout_id } = ctx.query;
+        // Verify user owns the workout before returning exercises
+        let query = 'SELECT e.* FROM workout_exercises e JOIN workouts w ON e.workout_id = w.id WHERE w.user_id = ?';
+        const params = [ctx.state.user.id];
+
+        if (workout_id) {
+            query += ' AND e.workout_id = ?';
+            params.push(workout_id);
+        }
+        const [rows] = await db.execute(query, params);
         ctx.body = rows.length ? rows : []; // Return an empty array if no exercises found
     } catch (err) {
         ctx.status = 500;
         ctx.body = { error: 'Failed to fetch exercises' };
     }
 });
-router.post('/api/exercises', async ctx => {
+router.post('/api/exercises', authMiddleware, async ctx => {
     const { workout_id, name, sets, reps, weight } = ctx.request.body;
 
     if (!workout_id || !name) {
@@ -75,6 +115,14 @@ router.post('/api/exercises', async ctx => {
     const safeWeight = Number(weight) || 0;
 
     try {
+        // Verify user owns the workout
+        const [workouts] = await db.execute('SELECT id FROM workouts WHERE id = ? AND user_id = ?', [workout_id, ctx.state.user.id]);
+        if (workouts.length === 0) {
+            ctx.status = 403;
+            ctx.body = { error: 'Unauthorized workout access' };
+            return;
+        }
+
         const [result] = await db.execute(
             'INSERT INTO workout_exercises (workout_id, name, `sets`, reps, weight) VALUES (?, ?, ?, ?, ?)',
             [workout_id, name, safeSets, safeReps, safeWeight]
@@ -86,11 +134,11 @@ router.post('/api/exercises', async ctx => {
     }
 });
 
-router.put('/api/workouts/:id', async ctx => {
+router.put('/api/workouts/:id', authMiddleware, async ctx => {
     const { name } = ctx.request.body;
     const { id } = ctx.params;
     try {
-        await db.execute('UPDATE workouts SET name = ? WHERE id = ?', [name, id]);
+        await db.execute('UPDATE workouts SET name = ? WHERE id = ? AND user_id = ?', [name, id, ctx.state.user.id]);
         ctx.body = { success: true };
     } catch (err) {
         ctx.status = 500;
@@ -98,10 +146,10 @@ router.put('/api/workouts/:id', async ctx => {
     }
 });
 
-router.delete('/api/workouts/:id', async ctx => {
+router.delete('/api/workouts/:id', authMiddleware, async ctx => {
     const { id } = ctx.params;
     try {
-        await db.execute('DELETE FROM workouts WHERE id = ?', [id]);
+        await db.execute('DELETE FROM workouts WHERE id = ? AND user_id = ?', [id, ctx.state.user.id]);
         ctx.body = { success: true };
     } catch (err) {
         ctx.status = 500;
@@ -109,7 +157,7 @@ router.delete('/api/workouts/:id', async ctx => {
     }
 });
 
-router.put('/api/exercises/:id', async ctx => {
+router.put('/api/exercises/:id', authMiddleware, async ctx => {
     const { name, sets, reps, weight } = ctx.request.body;
     const { id } = ctx.params;
 
@@ -125,8 +173,8 @@ router.put('/api/exercises/:id', async ctx => {
 
     try {
         await db.execute(
-            'UPDATE workout_exercises SET name = ?, `sets` = ?, reps = ?, weight = ? WHERE id = ?',
-            [name, safeSets, safeReps, safeWeight, id]
+            'UPDATE workout_exercises e JOIN workouts w ON e.workout_id = w.id SET e.name = ?, e.`sets` = ?, e.reps = ?, e.weight = ? WHERE e.id = ? AND w.user_id = ?',
+            [name, safeSets, safeReps, safeWeight, id, ctx.state.user.id]
         );
         ctx.body = { success: true };
     } catch (err) {
@@ -135,9 +183,9 @@ router.put('/api/exercises/:id', async ctx => {
     }
 });
 
-router.delete('/api/exercises/:id', async ctx => {
+router.delete('/api/exercises/:id', authMiddleware, async ctx => {
     const { id } = ctx.params;
-    await db.execute('DELETE FROM workout_exercises WHERE id = ?', [id]);
+    await db.execute('DELETE e FROM workout_exercises e JOIN workouts w ON e.workout_id = w.id WHERE e.id = ? AND w.user_id = ?', [id, ctx.state.user.id]);
     ctx.body = { success: true };
 });
 
@@ -202,29 +250,6 @@ router.post('/api/login', async (ctx) => {
 
     ctx.body = { token, user: { id: user.id, email: user.email, username: user.username } };
 });
-// MIDDLEWARE FOR PROTECTED ROUTES
-const authMiddleware = async (ctx, next) => {
-    const authHeader = ctx.headers.authorization;
-
-    if (!authHeader) {
-        ctx.status = 401;
-        ctx.body = { error: 'No token provided' };
-        return;
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        ctx.state.user = decoded;
-        await next();
-    } catch (err) {
-        ctx.status = 401;
-        ctx.body = { error: 'Invalid token' };
-    }
-};
-
-
 
 router.get('/api/profile', authMiddleware, async (ctx) => {
     ctx.body = { message: 'Protected route', user: ctx.state.user };
@@ -305,8 +330,53 @@ router.post('/api/diet-plans', authMiddleware, async (ctx) => {
 });
 
 
+// --- FOOD LOGS ROUTES ---
 
+router.get('/api/food-logs', authMiddleware, async (ctx) => {
+    const userId = ctx.state.user.id;
+    const { date } = ctx.query;
 
+    if (!date) {
+        ctx.status = 400;
+        ctx.body = { error: 'Date parameter is required' };
+        return;
+    }
+
+    try {
+        const [logs] = await db.execute(
+            'SELECT * FROM food_logs WHERE user_id = ? AND date = ? ORDER BY created_at ASC',
+            [userId, date]
+        );
+        ctx.body = logs;
+    } catch (err) {
+        console.error('Error fetching food logs:', err);
+        ctx.status = 500;
+        ctx.body = { error: 'Failed to fetch food logs' };
+    }
+});
+
+router.post('/api/food-logs', authMiddleware, async (ctx) => {
+    const userId = ctx.state.user.id;
+    const { date, meal_type, name, amount, unit, calories, protein, carbs, fats } = ctx.request.body;
+
+    if (!date || !meal_type || !name || amount === undefined || !unit || calories === undefined || protein === undefined || carbs === undefined || fats === undefined) {
+        ctx.status = 400;
+        ctx.body = { error: 'Missing required food log data' };
+        return;
+    }
+
+    try {
+        const [result] = await db.execute(
+            'INSERT INTO food_logs (user_id, date, meal_type, name, amount, unit, calories, protein, carbs, fats) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [userId, date, String(meal_type).toLowerCase(), name, amount, unit, calories, protein, carbs, fats]
+        );
+        ctx.body = { success: true, id: result.insertId };
+    } catch (err) {
+        console.error('Error saving food log:', err);
+        ctx.status = 500;
+        ctx.body = { error: 'Failed to save food log' };
+    }
+});
 
 app.use(router.routes()).use(router.allowedMethods());
 

@@ -42,39 +42,59 @@ export const AuthAPI = {
 
 export const FoodAPI = {
     getLogs: async (date) => {
-        return {
-            data: [
-                { id: 1, name: 'Chicken Breast', calories: 165, protein: 31, carbs: 0, fats: 3.6 },
-                { id: 2, name: 'Rice', calories: 130, protein: 2.7, carbs: 28, fats: 0.3 },
-            ]
-        }
+        const response = await fetch(`/api/food-logs?date=${date}`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Error fetching food logs');
+        return response.json();
+    },
+    saveLog: async (logData) => {
+        const response = await fetch('/api/food-logs', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(logData)
+        });
+        if (!response.ok) throw new Error('Error saving food log');
+        return response.json();
     }
 }
 
 export const WorkoutAPI = {
-    getWorkouts: async () => {
-        const response = await fetch('/api/workouts');
+    getWorkouts: async (date) => {
+        const url = date ? `/api/workouts?date=${date}` : '/api/workouts';
+        const response = await fetch(url, {
+            headers: getAuthHeaders()
+        });
         if (!response.ok) throw new Error(`Error fetching workouts`);
         return response.json();
     },
     createWorkout: async (workout) => {
         const response = await fetch('/api/workouts', {
             method: 'POST',
-            headers: getAuthHeaders(),
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(workout)
         });
         if (!response.ok) throw new Error(`Error creating workout`);
         return response.json();
     },
-    getExercises: async () => {
-        const response = await fetch('/api/exercises');
+    getExercises: async (workoutId) => {
+        const url = workoutId ? `/api/exercises?workout_id=${workoutId}` : '/api/exercises';
+        const response = await fetch(url, {
+            headers: getAuthHeaders()
+        });
         if (!response.ok) throw new Error(`Error fetching exercises`);
         return response.json();
     },
     createExercise: async (exercise) => {
         const response = await fetch('/api/exercises', {
             method: 'POST',
-            headers: getAuthHeaders(),
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(exercise)
         });
         if (!response.ok) throw new Error(`Error creating exercise`);
@@ -83,7 +103,10 @@ export const WorkoutAPI = {
     updateWorkout: async (id, workout) => {
         const response = await fetch(`/api/workouts/${id}`, {
             method: 'PUT',
-            headers: getAuthHeaders(),
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(workout)
         });
         if (!response.ok) throw new Error(`Error updating workout`);
@@ -100,7 +123,10 @@ export const WorkoutAPI = {
     updateExercise: async (id, exercise) => {
         const response = await fetch(`/api/exercises/${id}`, {
             method: 'PUT',
-            headers: getAuthHeaders(),
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(exercise)
         });
         if (!response.ok) throw new Error(`Error updating exercise`);
