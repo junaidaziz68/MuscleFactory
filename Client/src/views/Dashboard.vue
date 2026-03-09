@@ -37,9 +37,8 @@
               <option>Last 30 days</option>
             </select>
           </div>
-          <div class="h-[300px] w-full flex items-center justify-center text-zinc-600 bg-zinc-950/50 rounded-xl border border-dashed border-zinc-800">
-             <!-- Placeholder for Chart.js -->
-             <p>Chart Rendering Area (Chart.js)</p>
+          <div class="h-[300px] w-full relative">
+             <Line v-if="chartData" :data="chartData" :options="chartOptions" />
           </div>
         </div>
   
@@ -103,13 +102,65 @@
     GlassWater,
     Activity
   } from 'lucide-vue-next'
-  import { FoodAPI, WorkoutAPI } from '../api' // Imports updated
+  import { AuthAPI, FoodAPI, WorkoutAPI, CheckInAPI, WaterAPI } from '../api'
+  
+  import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+  } from 'chart.js'
+  import { Line } from 'vue-chartjs'
+  
+  ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+  )
   
   const todayDate = new Date().toISOString().split('T')[0]
   const foodLogs = ref([])
   const backendWorkouts = ref([]) // State for workouts
+  const userName = ref('Athlete')
+  const todayWeight = ref('0.0')
+  const todayWater = ref(0)
   
   onMounted(async () => {
+    try {
+        const profile = await AuthAPI.getProfile()
+        if (profile.user && profile.user.username) {
+            userName.value = profile.user.username
+        }
+    } catch(err) {
+        console.warn('Failed to fetch profile:', err)
+    }
+
+    try {
+        const checkins = await CheckInAPI.getLogs(todayDate)
+        if (checkins.weight) todayWeight.value = checkins.weight
+    } catch(err) {
+        console.warn('Failed to fetch checkins:', err)
+    }
+
+    try {
+        const water = await WaterAPI.getLogs(todayDate)
+        if (water && water.length) {
+            todayWater.value = water.reduce((sum, log) => sum + log.amount, 0)
+        }
+    } catch(err) {
+        console.warn('Failed to fetch water:', err)
+    }
+
     try {
       const res = await FoodAPI.getLogs(todayDate)
       foodLogs.value = res.data
@@ -132,8 +183,8 @@
   
   const stats = computed(() => [
     { label: 'Calories Burned', value: '1,240', unit: 'kcal', icon: Flame, color: 'text-orange-500', bgColor: 'bg-orange-500/10', trend: '12' },
-    { label: 'Avg Pulse', value: '72', unit: 'bpm', icon: Activity, color: 'text-rose-500', bgColor: 'bg-rose-500/10', trend: '5' },
-    { label: 'Body Weight', value: '78.5', unit: 'kg', icon: Weight, color: 'text-indigo-500', bgColor: 'bg-indigo-500/10', trend: '0.8' },
+    { label: 'Water Consumed', value: todayWater.value, unit: 'ml', icon: GlassWater, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', trend: '5' },
+    { label: 'Body Weight', value: todayWeight.value, unit: 'kg', icon: Weight, color: 'text-indigo-500', bgColor: 'bg-indigo-500/10', trend: '0.8' },
     { label: 'Consumed Today', value: dailyCals.value || '0', unit: 'kcal', icon: Utensils, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10', trend: '15' },
   ])
   
@@ -150,7 +201,74 @@
       { name: 'Fats', current: totals.f, target: 70, color: 'bg-amber-500' },
     ]
   })
-  
+
+  const chartData = ref({
+    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    datasets: [
+      {
+        label: 'Calories Burned',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)', // emerald-500 with opacity
+        borderColor: '#10b981', // emerald-500
+        borderWidth: 3,
+        pointBackgroundColor: '#10b981',
+        pointBorderColor: '#fff',
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: '#10b981',
+        fill: true,
+        tension: 0.4, // smooth curves
+        data: [1200, 1900, 1500, 2100, 1800, 2400, 1240]
+      }
+    ]
+  })
+
+  const chartOptions = ref({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        backgroundColor: '#18181b', // zinc-900
+        titleColor: '#e4e4e7', // zinc-200
+        bodyColor: '#a1a1aa', // zinc-400
+        borderColor: '#27272a', // zinc-800
+        borderWidth: 1,
+        padding: 12,
+        displayColors: false,
+        callbacks: {
+          label: function(context) {
+            return context.parsed.y + ' kcal';
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: '#27272a', // zinc-800
+          drawBorder: false,
+        },
+        ticks: {
+          color: '#71717a', // zinc-500
+          stepSize: 500
+        }
+      },
+      x: {
+        grid: {
+          display: false,
+          drawBorder: false,
+        },
+        ticks: {
+          color: '#71717a', // zinc-500
+        }
+      }
+    }
+  })
+
+
+
   const schedule = computed(() => {
     if (backendWorkouts.value.length > 0) {
         return backendWorkouts.value.map((wk, index) => ({
@@ -166,7 +284,7 @@
     return [
         { id: 1, title: 'Upper Body Workout', time: '08:00 AM', description: 'Strength Training', icon: Dumbbell, color: 'text-emerald-400', bgColor: 'bg-emerald-400/10' },
         { id: 2, title: 'High Protein Lunch', time: '01:00 PM', description: 'Chicken & Quinoa', icon: Utensils, color: 'text-indigo-400', bgColor: 'bg-indigo-400/10' },
-        { id: 3, title: 'Hydration Goal', time: 'All Day', description: '3.5L / 4L', icon: GlassWater, color: 'text-cyan-400', bgColor: 'bg-cyan-400/10' },
+        { id: 3, title: 'Hydration Goal', time: 'All Day', description: `${todayWater.value}ml / 3000ml`, icon: GlassWater, color: 'text-cyan-400', bgColor: 'bg-cyan-400/10' },
     ]
   })
   </script>
