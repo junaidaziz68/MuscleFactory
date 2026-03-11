@@ -27,6 +27,12 @@ const routes = [
         meta: { requiresAuth: true }
     },
     {
+        path: '/tracker',
+        name: 'tracker',
+        component: () => import('../views/Tracker_Plan.vue'),
+        meta: { requiresAuth: true }
+    },
+    {
         path: '/login',
         name: 'login',
         component: () => import('../views/Login.vue')
