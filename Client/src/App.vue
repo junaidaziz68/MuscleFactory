@@ -95,6 +95,7 @@ const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Calorie Calculator', path: '/calculator', icon: Calculator },
   { name: 'Workout Plan', path: '/workout-plan', icon: Dumbbell },
+  { name: 'Diet Plan', path: '/diet-plan', icon: UtensilsCrossed },
 ]
 </script>
 

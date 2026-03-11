@@ -21,6 +21,12 @@ const routes = [
         meta: { requiresAuth: true }
     },
     {
+        path: '/diet-plan',
+        name: 'diet-plan',
+        component: () => import('../views/DietPlan.vue'),
+        meta: { requiresAuth: true }
+    },
+    {
         path: '/login',
         name: 'login',
         component: () => import('../views/Login.vue')
@@ -38,16 +44,18 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-    const { state } = useAuth()
-    const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false)
+    // Check if the current user is authenticated (naive check using localStorage presence for synchronous load)
+    const isAuthenticated = !!localStorage.getItem('token')
+
+    // Check if route requires auth
+    const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
 
     // If the route is login or register and user is already authenticated, send to home
-    if ((to.name === 'login' || to.name === 'register') && state.isAuthenticated) {
+    if ((to.name === 'login' || to.name === 'register') && isAuthenticated) {
         next({ name: 'dashboard' })
     }
-    // If route doesn't have requiresAuth: false natively (meaning it requires auth by default)
-    // We treat all main routes as requiring auth except login and register
-    else if (to.name !== 'login' && to.name !== 'register' && !state.isAuthenticated) {
+    // If route requires auth and user is NOT authenticated, redirect to login
+    else if (requiresAuth && !isAuthenticated) {
         next({ name: 'login' })
     }
     else {
