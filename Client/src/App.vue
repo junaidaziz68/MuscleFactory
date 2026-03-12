@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-screen bg-zinc-950 text-zinc-100 font-sans">
     <!-- Sidebar -->
-    <aside :class="[
+    <aside v-if="state.isAuthenticated" :class="[
       'fixed inset-y-0 left-0 z-50 w-64 bg-zinc-900 border-r border-zinc-800 transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
       isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
     ]">
@@ -26,11 +26,16 @@
 
         <div class="p-4 border-t border-zinc-800">
           <div class="flex items-center gap-3 px-3 py-2">
-            <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold">JD</div>
-            <div>
-              <p class="text-xs font-medium text-zinc-200">John Doe</p>
-              <p class="text-[10px] text-zinc-500">Premium Member</p>
+            <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold uppercase truncate">
+              {{ state.user?.username?.substring(0, 2) || 'U' }}
             </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-medium text-zinc-200 truncate">{{ state.user?.username || 'User' }}</p>
+              <p class="text-[10px] text-zinc-500 truncate">{{ state.user?.email || '' }}</p>
+            </div>
+            <button @click="handleLogout" class="p-2 text-zinc-400 hover:text-red-400 transition-colors ml-auto" title="Log out">
+              <LogOut class="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -39,7 +44,7 @@
     <!-- Main Content -->
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
       <!-- Topbar (Mobile) -->
-      <header class="lg:hidden h-16 flex items-center justify-between px-6 bg-zinc-900/50 backdrop-blur-xl border-b border-zinc-800/50 sticky top-0 z-40">
+      <header v-if="state.isAuthenticated" class="lg:hidden h-16 flex items-center justify-between px-6 bg-zinc-900/50 backdrop-blur-xl border-b border-zinc-800/50 sticky top-0 z-40">
         <div class="flex items-center gap-3">
           <Activity class="w-6 h-6 text-emerald-500" />
           <span class="font-bold">FitnessPro</span>
@@ -58,7 +63,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuth } from './store/auth'
 import { 
   LayoutDashboard, 
   Calculator, 
@@ -67,8 +74,20 @@ import {
   CalendarCheck,
   Activity,
   Menu,
-  X
+  X,
+  LogOut
 } from 'lucide-vue-next'
+
+const router = useRouter()
+const { state, clearAuth, initAuth } = useAuth()
+onMounted(() => {
+  initAuth()
+})
+
+const handleLogout = () => {
+    clearAuth()
+    router.push('/login')
+}
 
 const isSidebarOpen = ref(false)
 
@@ -76,6 +95,8 @@ const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Calorie Calculator', path: '/calculator', icon: Calculator },
   { name: 'Workout Plan', path: '/workout-plan', icon: Dumbbell },
+  { name: 'Diet Plan', path: '/diet-plan', icon: UtensilsCrossed },
+  { name: 'Tracker', path: '/tracker', icon: CalendarCheck },
 ]
 </script>
 

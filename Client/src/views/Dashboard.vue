@@ -2,7 +2,7 @@
     <div class="space-y-8">
       <!-- Header -->
       <header>
-        <h2 class="text-3xl font-bold text-zinc-100">Welcome back, John!</h2>
+        <h2 class="text-3xl font-bold text-zinc-100">Welcome back, {{ userName }}!</h2>
         <p class="text-zinc-400 mt-1">Here's your fitness overview for today.</p>
       </header>
   
@@ -102,7 +102,7 @@
     GlassWater,
     Activity
   } from 'lucide-vue-next'
-  import { AuthAPI, FoodAPI, WorkoutAPI, CheckInAPI, WaterAPI } from '../api'
+  import { AuthAPI, FoodAPI, WorkoutAPI, CheckInAPI, WaterAPI } from '../api' // Imports updated
   
   import {
     Chart as ChartJS,
