@@ -6,6 +6,8 @@ const cors = require('@koa/cors');
 const fetch = require('node-fetch');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const yaml = require('js-yaml');
+const { koaSwagger } = require('koa2-swagger-ui');
 
 const db = require('./db');
 
@@ -44,13 +46,22 @@ router.get('/uploads/:filename', async (ctx) => {
     }
 });
 
-
+// Rouer test endpoint
 router.get('/', ctx => {
     ctx.body = { status: 'API running' };
 });
 
+// Setup Swagger UI route
+try {
+    const yamlContent = fs.readFileSync(path.join(__dirname, 'openapi.yml'), 'utf8');
+    const openapiSpec = yaml.load(yamlContent);
+    router.get('/docs', koaSwagger({ routePrefix: false, swaggerOptions: { spec: openapiSpec } }));
+} catch (err) {
+    console.error('Failed to parse openapi.yml:', err);
+}
 
-// MIDDLEWARE FOR PROTECTED ROUTES
+
+// MIDDLEWARE FOR AUTHENTICATION
 const authMiddleware = async (ctx, next) => {
     const authHeader = ctx.headers.authorization;
 
@@ -273,9 +284,9 @@ router.get('/api/profile', authMiddleware, async (ctx) => {
     ctx.body = { message: 'Protected route', user: ctx.state.user };
 });
 
-// --- DIET PLAN ROUTES ---
+// Diet plan generation endpoint
 
-// Get all diet plans for the authenticated user
+// Diet plan for users
 router.get('/api/diet-plans', authMiddleware, async (ctx) => {
     const userId = ctx.state.user.id;
     try {
@@ -533,6 +544,10 @@ router.post('/api/checkins/photo', authMiddleware, upload.single('photo'), async
 app.use(router.routes()).use(router.allowedMethods());
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;

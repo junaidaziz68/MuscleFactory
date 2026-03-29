@@ -32,9 +32,9 @@
         <div class="lg:col-span-2 bg-zinc-900 border border-zinc-800 p-6 rounded-2xl">
           <div class="flex items-center justify-between mb-6">
             <h4 class="font-bold text-zinc-100">Activity & Progress</h4>
-            <select class="bg-zinc-800 border-none text-zinc-400 text-xs rounded-lg px-2 py-1 focus:ring-1 focus:ring-emerald-500">
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
+            <select v-model="chartMetric" class="bg-zinc-800 border-none text-zinc-400 text-xs rounded-lg px-2 py-1 focus:ring-1 focus:ring-emerald-500">
+              <option value="calories">Calories Consumed</option>
+              <option value="weight">Weight Progress</option>
             </select>
           </div>
           <div class="h-[300px] w-full relative">
@@ -59,7 +59,7 @@
           <div class="mt-8 pt-6 border-t border-zinc-800 flex justify-between items-center">
               <div>
                   <p class="text-xs text-zinc-500">Total Calories</p>
-                  <p class="text-lg font-bold text-emerald-400">1,840 / 2,400</p>
+                  <p class="text-lg font-bold text-emerald-400">{{ dailyCals }} / {{ userTargets.tdee }}</p>
               </div>
               <button class="bg-emerald-500 hover:bg-emerald-600 text-zinc-950 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/20">
                   Log Meal
@@ -102,7 +102,7 @@
     GlassWater,
     Activity
   } from 'lucide-vue-next'
-  import { AuthAPI, FoodAPI, WorkoutAPI, CheckInAPI, WaterAPI } from '../api' // Imports updated
+  import { AuthAPI, FoodAPI, WorkoutAPI, CheckInAPI, WaterAPI, DietAPI } from '../api'
   
   import {
     Chart as ChartJS,
@@ -135,6 +135,13 @@
   const todayWeight = ref('0.0')
   const todayWater = ref(0)
   
+  const userTargets = ref({ tdee: 2400, protein: 180, carbs: 250, fats: 70 })
+  const dietMeals = ref([])
+  const historicalCals = ref([])
+  const historicalWeight = ref([])
+  const chartLabels = ref([])
+  const chartMetric = ref('weight') // Default to weight based on user feedback
+  
   onMounted(async () => {
     try {
         const profile = await AuthAPI.getProfile()
@@ -163,17 +170,68 @@
 
     try {
       const res = await FoodAPI.getLogs(todayDate)
-      foodLogs.value = res.data
+      foodLogs.value = res
     } catch (err) {
       console.warn('Backend not reachable, using mockup data.')
     }
     
     // Fetch actual data from Koa backend via Vite proxy
     try {
-        const workouts = await WorkoutAPI.getWorkouts()
+        const workouts = await WorkoutAPI.getWorkouts(todayDate)
         backendWorkouts.value = workouts
     } catch (err) {
         console.error('Failed to fetch workouts from backend:', err)
+    }
+
+    // Load saved macro targets from the Calculator
+    const savedTargets = localStorage.getItem('userMacroTargets')
+    if (savedTargets) {
+        try {
+            userTargets.value = JSON.parse(savedTargets)
+        } catch (e) {
+            console.error("Failed to parse saved targets", e)
+        }
+    }
+
+    try {
+        const plans = await DietAPI.getPlans()
+        if (plans && plans.length > 0) {
+            dietMeals.value = plans[0].meals || []
+        }
+    } catch (err) {
+        console.warn('Failed to fetch diet plans:', err)
+    }
+
+    try {
+        const past7Days = []
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date()
+            d.setDate(d.getDate() - i)
+            past7Days.push(d.toISOString().split('T')[0])
+        }
+        
+        const logsResponses = await Promise.all(
+            past7Days.map(date => FoodAPI.getLogs(date).catch(() => []))
+        )
+        
+        const checkinsResponses = await Promise.all(
+            past7Days.map(date => CheckInAPI.getLogs(date).catch(() => ({})))
+        )
+        
+        historicalCals.value = logsResponses.map(logs => 
+            logs.reduce((sum, log) => sum + log.calories, 0)
+        )
+        
+        // Use todayWeight as fallback for missing past weight entries if it's realistic, or just zero. But line charts drop to 0.
+        // Let's propagate last known weight backward/forward or just plot raw. 
+        historicalWeight.value = checkinsResponses.map(c => Number(c.weight) || 0)
+        
+        chartLabels.value = past7Days.map(date => {
+            const d = new Date(date)
+            return d.toLocaleDateString('en-US', { weekday: 'short' })
+        })
+    } catch (err) {
+        console.warn('Failed to fetch historical data:', err)
     }
   })
   
@@ -196,96 +254,142 @@
     }), { p: 0, c: 0, f: 0 })
   
     return [
-      { name: 'Protein', current: totals.p, target: 180, color: 'bg-emerald-500' },
-      { name: 'Carbs', current: totals.c, target: 250, color: 'bg-indigo-500' },
-      { name: 'Fats', current: totals.f, target: 70, color: 'bg-amber-500' },
+      { name: 'Protein', current: totals.p, target: userTargets.value.protein, color: 'bg-emerald-500' },
+      { name: 'Carbs', current: totals.c, target: userTargets.value.carbs, color: 'bg-indigo-500' },
+      { name: 'Fats', current: totals.f, target: userTargets.value.fats, color: 'bg-amber-500' },
     ]
   })
-
-  const chartData = ref({
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    datasets: [
-      {
-        label: 'Calories Burned',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)', // emerald-500 with opacity
-        borderColor: '#10b981', // emerald-500
-        borderWidth: 3,
-        pointBackgroundColor: '#10b981',
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: '#10b981',
-        fill: true,
-        tension: 0.4, // smooth curves
-        data: [1200, 1900, 1500, 2100, 1800, 2400, 1240]
-      }
-    ]
+  
+  const chartData = computed(() => {
+    const isWeight = chartMetric.value === 'weight'
+    const color = isWeight ? { bg: 'rgba(99, 102, 241, 0.1)', border: '#6366f1' } : { bg: 'rgba(16, 185, 129, 0.1)', border: '#10b981' }
+    
+    return {
+        labels: chartLabels.value.length ? chartLabels.value : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [
+        {
+            label: isWeight ? 'Body Weight' : 'Calories Consumed',
+            backgroundColor: color.bg, 
+            borderColor: color.border,
+            borderWidth: 3,
+            pointBackgroundColor: color.border,
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: color.border,
+            fill: true,
+            tension: 0.4,
+            data: isWeight 
+                ? (historicalWeight.value.length && historicalWeight.value.some(w => w > 0) ? historicalWeight.value : [75, 75, 75.2, 75.1, 74.9, 74.8, Number(todayWeight.value) || 74.5])
+                : (historicalCals.value.length ? historicalCals.value : [1200, 1900, 1500, 2100, 1800, 2400, dailyCals.value])
+        }
+        ]
+    }
   })
 
-  const chartOptions = ref({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false
-      },
-      tooltip: {
-        backgroundColor: '#18181b', // zinc-900
-        titleColor: '#e4e4e7', // zinc-200
-        bodyColor: '#a1a1aa', // zinc-400
-        borderColor: '#27272a', // zinc-800
-        borderWidth: 1,
-        padding: 12,
-        displayColors: false,
-        callbacks: {
-          label: function(context) {
-            return context.parsed.y + ' kcal';
-          }
-        }
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: '#27272a', // zinc-800
-          drawBorder: false,
+  const chartOptions = computed(() => {
+    const isWeight = chartMetric.value === 'weight'
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+        legend: {
+            display: false
         },
-        ticks: {
-          color: '#71717a', // zinc-500
-          stepSize: 500
+        tooltip: {
+            backgroundColor: '#18181b', // zinc-900
+            titleColor: '#e4e4e7', // zinc-200
+            bodyColor: '#a1a1aa', // zinc-400
+            borderColor: '#27272a', // zinc-800
+            borderWidth: 1,
+            padding: 12,
+            displayColors: false,
+            callbacks: {
+            label: function(context) {
+                return context.parsed.y + (isWeight ? ' kg' : ' kcal');
+            }
+            }
         }
-      },
-      x: {
-        grid: {
-          display: false,
-          drawBorder: false,
         },
-        ticks: {
-          color: '#71717a', // zinc-500
+        scales: {
+        y: {
+            beginAtZero: !isWeight,
+            grid: {
+            color: '#27272a', // zinc-800
+            drawBorder: false,
+            },
+            ticks: {
+            color: '#71717a', // zinc-500
+            stepSize: isWeight ? 1 : 500
+            }
+        },
+        x: {
+            grid: {
+            display: false,
+            drawBorder: false,
+            },
+            ticks: {
+            color: '#71717a', // zinc-500
+            }
         }
-      }
+        }
     }
   })
 
 
 
   const schedule = computed(() => {
-    if (backendWorkouts.value.length > 0) {
-        return backendWorkouts.value.map((wk, index) => ({
-            id: wk.id || index,
+    let items = []
+    
+    // Diet Meals
+    dietMeals.value.forEach((meal, i) => {
+        items.push({
+            id: `meal-${i}`,
+            title: meal.name,
+            time: 'Meal ' + (i + 1),
+            description: meal.calories + ' kcal planned',
+            icon: Utensils,
+            color: 'text-indigo-400',
+            bgColor: 'bg-indigo-400/10',
+            order: i
+        })
+    })
+
+    // Workouts
+    backendWorkouts.value.forEach((wk, i) => {
+        items.push({
+            id: `wk-${wk.id || i}`,
             title: wk.name,
-            time: new Date(wk.date).toLocaleDateString(),
-            description: 'Workout from Backend',
+            time: 'Workout',
+            description: 'Scheduled for today',
             icon: Dumbbell,
             color: 'text-emerald-400',
-            bgColor: 'bg-emerald-400/10'
-        }))
+            bgColor: 'bg-emerald-400/10',
+            order: 10 + i
+        })
+    })
+    
+    // Hydration
+    if (todayWater.value < 3000) {
+        items.push({
+            id: 'water',
+            title: 'Hydration Goal',
+            time: 'All Day',
+            description: `${todayWater.value}ml / 3000ml`,
+            icon: GlassWater,
+            color: 'text-cyan-400',
+            bgColor: 'bg-cyan-400/10',
+            order: 20
+        })
     }
-    return [
-        { id: 1, title: 'Upper Body Workout', time: '08:00 AM', description: 'Strength Training', icon: Dumbbell, color: 'text-emerald-400', bgColor: 'bg-emerald-400/10' },
-        { id: 2, title: 'High Protein Lunch', time: '01:00 PM', description: 'Chicken & Quinoa', icon: Utensils, color: 'text-indigo-400', bgColor: 'bg-indigo-400/10' },
-        { id: 3, title: 'Hydration Goal', time: 'All Day', description: `${todayWater.value}ml / 3000ml`, icon: GlassWater, color: 'text-cyan-400', bgColor: 'bg-cyan-400/10' },
-    ]
+    
+    // Fallback if completely empty
+    if (items.length === 0) {
+        return [
+            { id: 1, title: 'No Schedule', time: 'Rest Day', description: 'Take it easy today.', icon: Activity, color: 'text-emerald-400', bgColor: 'bg-emerald-400/10' },
+        ]
+    }
+
+    return items.sort((a, b) => a.order - b.order)
   })
   </script>
   
