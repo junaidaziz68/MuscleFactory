@@ -103,6 +103,11 @@
                   </p>
               </div>
           </div>
+            
+          <div class="mt-8 flex flex-col items-center justify-center space-y-4 animate-pulse">
+            <div class="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-emerald-400 font-bold">Personalizing your dashboard...</p>
+          </div>
         </div>
   
         <div v-else class="h-full bg-zinc-900/50 border border-dashed border-zinc-800 rounded-2xl flex flex-col items-center justify-center p-12 text-center text-zinc-500">
@@ -117,7 +122,10 @@
   
   <script setup>
   import { ref, computed } from 'vue'
+  import { useRouter } from 'vue-router'
   import { Calculator, Info } from 'lucide-vue-next'
+  
+  const router = useRouter()
   
   const form = ref({
     gender: 'Male',
@@ -188,7 +196,7 @@
       tdee,
       offset
     }
-
+  
     // Save to localStorage for the Diet Plan to access
     const saveTargets = {
       tdee: Math.round(tdee),
@@ -197,6 +205,10 @@
       fats: Math.round(tdee * 0.25 / 9)
     }
     localStorage.setItem('userMacroTargets', JSON.stringify(saveTargets))
+    
+    // Auto redirect with a slight delay
+    setTimeout(() => {
+        router.push('/')
+    }, 3500)
   }
   </script>
-  

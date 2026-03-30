@@ -52,16 +52,24 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
     // Check if the current user is authenticated (naive check using localStorage presence for synchronous load)
     const isAuthenticated = !!localStorage.getItem('token')
+    const hasCalculatedMacros = !!localStorage.getItem('userMacroTargets')
 
     // Check if route requires auth
-    const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+    const requiresAuth = to.matched.some(record => record.meta.requiresAuth) || to.name === 'dashboard'
 
+    if (isAuthenticated && !hasCalculatedMacros && to.name !== 'calculator' && to.name !== 'login' && to.name !== 'register') {
+        next({ name: 'calculator' })
+    }
     // If the route is login or register and user is already authenticated, send to home
-    if ((to.name === 'login' || to.name === 'register') && isAuthenticated) {
-        next({ name: 'dashboard' })
+    else if ((to.name === 'login' || to.name === 'register') && isAuthenticated) {
+        if (!hasCalculatedMacros) {
+            next({ name: 'calculator' })
+        } else {
+            next({ name: 'dashboard' })
+        }
     }
     // If route requires auth and user is NOT authenticated, redirect to login
-    else if (requiresAuth && !isAuthenticated) {
+    else if (requiresAuth && !isAuthenticated && to.name !== 'login') {
         next({ name: 'login' })
     }
     else {

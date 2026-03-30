@@ -23,6 +23,7 @@
             <h3 class="text-2xl font-bold text-zinc-100">{{ stat.value }}</h3>
             <span class="text-zinc-500 text-xs">{{ stat.unit }}</span>
           </div>
+          <p v-if="stat.subtext" class="text-xs text-zinc-400 mt-3 font-medium bg-zinc-950 px-2 py-1 rounded-lg border border-zinc-800 shadow-sm inline-block">{{ stat.subtext }}</p>
         </div>
       </div>
   
@@ -61,9 +62,9 @@
                   <p class="text-xs text-zinc-500">Total Calories</p>
                   <p class="text-lg font-bold text-emerald-400">{{ dailyCals }} / {{ userTargets.tdee }}</p>
               </div>
-              <button class="bg-emerald-500 hover:bg-emerald-600 text-zinc-950 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/20">
-                  Log Meal
-              </button>
+              <router-link to="/diet-plan" class="bg-emerald-500 hover:bg-emerald-600 text-zinc-950 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/20">
+                Log Meal
+            </router-link>
           </div>
         </div>
       </div>
@@ -72,17 +73,34 @@
       <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl">
           <h4 class="font-bold text-zinc-100 mb-6">Today's Schedule</h4>
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div v-for="task in schedule" :key="task.id" 
-                  class="flex items-center gap-4 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800 group hover:border-zinc-700 transition-colors">
-                  <div :class="`w-12 h-12 rounded-xl flex items-center justify-center ${task.bgColor}`">
-                      <component :is="task.icon" :class="`w-6 h-6 ${task.color}`" />
+              <template v-for="task in schedule" :key="task.id">
+                  <router-link v-if="task.route" :to="task.route" 
+                      class="flex items-center gap-4 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800 group hover:border-emerald-500/50 transition-colors cursor-pointer w-full text-left">
+                      <div :class="`w-12 h-12 flex-shrink-0 rounded-xl flex items-center justify-center ${task.bgColor}`">
+                          <component :is="task.icon" :class="`w-6 h-6 ${task.color}`" />
+                      </div>
+                      <div class="flex-1 overflow-hidden">
+                          <p class="text-sm font-bold text-zinc-100 truncate">{{ task.title }}</p>
+                          <p class="text-xs text-zinc-500 truncate">{{ task.time }} • {{ task.description }}</p>
+                      </div>
+                      <ArrowRight class="w-4 h-4 flex-shrink-0 text-zinc-700 group-hover:text-emerald-400 transition-colors" />
+                  </router-link>
+                  
+                  <div v-else class="flex items-center gap-4 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800">
+                      <div :class="`w-12 h-12 flex-shrink-0 rounded-xl flex items-center justify-center ${task.bgColor}`">
+                          <component :is="task.icon" :class="`w-6 h-6 ${task.color}`" />
+                      </div>
+                      <div class="flex-1 overflow-hidden">
+                          <p class="text-sm font-bold text-zinc-100 truncate">{{ task.title }}</p>
+                          <p class="text-xs text-zinc-500 truncate">{{ task.time }} • {{ task.description }}</p>
+                      </div>
                   </div>
-                  <div class="flex-1">
-                      <p class="text-sm font-bold text-zinc-100">{{ task.title }}</p>
-                      <p class="text-xs text-zinc-500">{{ task.time }} • {{ task.description }}</p>
-                  </div>
-                  <ArrowRight class="w-4 h-4 text-zinc-700 group-hover:text-zinc-300 transition-colors" />
-              </div>
+              </template>
+          </div>
+          <div class="mt-8 pt-6 border-t border-zinc-800 text-center">
+              <router-link to="/workout-plan" class="inline-flex items-center gap-2 text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors">
+                  Go to full Workout Plan <ArrowRight class="w-4 h-4" />
+              </router-link>
           </div>
       </div>
     </div>
@@ -239,12 +257,20 @@
     return foodLogs.value.reduce((sum, log) => sum + log.calories, 0)
   })
   
-  const stats = computed(() => [
-    { label: 'Calories Burned', value: '1,240', unit: 'kcal', icon: Flame, color: 'text-orange-500', bgColor: 'bg-orange-500/10', trend: '12' },
-    { label: 'Water Consumed', value: todayWater.value, unit: 'ml', icon: GlassWater, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', trend: '5' },
-    { label: 'Body Weight', value: todayWeight.value, unit: 'kg', icon: Weight, color: 'text-indigo-500', bgColor: 'bg-indigo-500/10', trend: '0.8' },
-    { label: 'Consumed Today', value: dailyCals.value || '0', unit: 'kcal', icon: Utensils, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10', trend: '15' },
-  ])
+  const stats = computed(() => {
+    const macrosSum = foodLogs.value.reduce((acc, log) => ({
+      p: acc.p + log.protein,
+      c: acc.c + log.carbs,
+      f: acc.f + log.fats
+    }), { p: 0, c: 0, f: 0 })
+
+    return [
+      { label: 'Consumed Today', value: dailyCals.value || '0', unit: 'kcal', icon: Utensils, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10', trend: '15', subtext: `P: ${Math.round(macrosSum.p)}g • C: ${Math.round(macrosSum.c)}g • F: ${Math.round(macrosSum.f)}g` },
+      { label: 'Calories Burned', value: '1,240', unit: 'kcal', icon: Flame, color: 'text-orange-500', bgColor: 'bg-orange-500/10', trend: '12' },
+      { label: 'Water Consumed', value: todayWater.value, unit: 'ml', icon: GlassWater, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', trend: '5' },
+      { label: 'Body Weight', value: todayWeight.value, unit: 'kg', icon: Weight, color: 'text-indigo-500', bgColor: 'bg-indigo-500/10', trend: '0.8' },
+    ]
+  })
   
   const macros = computed(() => {
     const totals = foodLogs.value.reduce((acc, log) => ({
@@ -350,7 +376,8 @@
             icon: Utensils,
             color: 'text-indigo-400',
             bgColor: 'bg-indigo-400/10',
-            order: i
+            order: i,
+            route: '/diet-plan'
         })
     })
 
@@ -364,7 +391,8 @@
             icon: Dumbbell,
             color: 'text-emerald-400',
             bgColor: 'bg-emerald-400/10',
-            order: 10 + i
+            order: 10 + i,
+            route: '/workout-plan'
         })
     })
     
@@ -378,7 +406,8 @@
             icon: GlassWater,
             color: 'text-cyan-400',
             bgColor: 'bg-cyan-400/10',
-            order: 20
+            order: 20,
+            route: '/tracker'
         })
     }
     

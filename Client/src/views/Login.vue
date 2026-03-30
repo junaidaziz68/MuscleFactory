@@ -66,7 +66,12 @@ const handleLogin = async () => {
     try {
         const response = await AuthAPI.login(email.value, password.value)
         setAuth(response.token, response.user)
-        router.push('/') // Redirect to dashboard
+        
+        if (!localStorage.getItem('userMacroTargets')) {
+             router.push('/calculator') // Send new users to onboarding
+        } else {
+             router.push('/') // Redirect to dashboard
+        }
     } catch (err) {
         errorMessage.value = err.message || 'Failed to login'
     } finally {
